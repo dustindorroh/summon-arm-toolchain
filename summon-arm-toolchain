@@ -122,12 +122,12 @@ echo "CPUS=$CPUS"
 ##############################################################################
 if [ ${USE_LINARO} == 0 ] ; then
 	# For FSF GCC:
-	GCCVERSION=4.5.2
+	GCCVERSION=4.7.1
 	GCC=gcc-${GCCVERSION}
 	GCCURL=http://ftp.gnu.org/gnu/gcc/${GCC}/${GCC}.tar.gz
 
 	# For FSF GDB:
-	GDBVERSION=7.3.1
+	GDBVERSION=7.5
 	GDB=gdb-${GDBVERSION}
 	GDBURL=http://ftp.gnu.org/gnu/gdb/${GDB}.tar.bz2
 else
@@ -145,8 +145,8 @@ else
 	GDBURL=http://launchpad.net/gdb-linaro/7.3/${GDBRELEASE}/+download/${GDB}.tar.bz2
 fi
 
-BINUTILS=binutils-2.21.1
-NEWLIB=newlib-1.19.0
+BINUTILS=binutils-2.22
+NEWLIB=newlib-1.20.0
 OOCD=openocd-0.6.0-rc1
 OOCD_GIT=
 LIBCMSIS=
@@ -442,14 +442,19 @@ if [ ! -e ${STAMPS}/${GCC}-${NEWLIB}.build ]; then
     log "Adding libgloss symlink to gcc"
     ln -f -s `pwd`/${NEWLIB}/libgloss ${GCC}
 
-    if [ ${DEFAULT_TO_CORTEX_M3} == 0 ] ; then
-	log "Patching gcc to add multilib support"
-	cd ${GCC}
-	patch -p0 -i ../patches/patch-gcc-config-arm-t-arm-elf.diff
-  patch -p1 -i ../patches/patch-gcc-gengtype-fix.diff
-	patch -p0 -i ../patches/patch-libgcc-divide-exceptions.diff
-	cd ..
-    fi
+	if [ ${DEFAULT_TO_CORTEX_M3} == 0 ] ; then
+		log "Patching gcc to add multilib support"
+		cd ${GCC}
+		if [ ${USE_LINARO} == 1 ]; then
+			patch -p0 -i ../patches/patch-gcc-config-arm-t-arm-elf.diff
+			patch -p0 -i ../patches/patch-gcc-gengtype-fix.diff
+			patch -p0 -i ../patches/patch-libgcc-divide-exceptions.diff
+		else
+			patch -p0 -i ../patches/patch-gcc-vanilla-config-arm-t-arm-elf.diff
+			patch -p0 -i ../patches/patch-libgcc-vanilla-divide-exceptions.diff
+		fi
+		cd ..
+	fi
 
     cd build
     if [ "X${GCC_CC}" != "X" ] ; then
@@ -672,8 +677,9 @@ override_dh_strip:
 
 override_dh_prep:
 	rm -f debian/${DEB_PACKAGE_NAME}.substvars
-	rm -f debian/${DEB_PACKAGE_NAME}*debhelper
+	rm -f debian/${DEB_PACKAGE_NAME}*debhelper*
 	rm -f debian/${DEB_PACKAGE_NAME}*post*
+	rm -f debian/files
 	rm -rf debian/${DEB_PACKAGE_NAME}/
 END
 	# Debian magic install
